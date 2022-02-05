@@ -7,9 +7,19 @@ BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 
 RED   = (255,   0,   0)
-MAIN_THEME = (246, 197, 233)
 BLUE  = (  0,   0, 255)
- 
+
+# MAIN_THEME = (246, 197, 233)
+# X3_WORD_COLOR = (134, 87, 255)
+# X2_WORD_COLOR = (140, 155, 194)
+
+MAIN_THEME = (188, 197, 220)
+X3_WORD_COLOR = (13, 112, 75)
+X2_WORD_COLOR = (132, 214, 127)
+X2_LETTER_COLOR = (134, 87, 255)
+X3_LETTER_COLOR = (234, 207, 150)
+START_COLOR = (246, 197, 233)
+
 SCREEN_WIDTH  = 600
 SCREEN_HEIGHT = 600
 
@@ -70,15 +80,36 @@ BOARD_POS = (10, 10)
 
 PLAYER_BOARD_POS = (10, 500)
 
+X2_WORD_SPOTS = [(1, 1), (2, 2), (3, 3), (4, 4), (13, 1), (12, 2), (11, 3), (10, 4), (1, 13), (2, 12), (3, 11), (4, 10), (10, 10), (11, 11), (12, 12), (13, 13)]
+X3_WORD_SPOTS = [(0, 0), (7, 0), (14, 0), (0, 7), (14, 7), (0, 14), (7, 14), (14, 14)]
+X2_LETTER_SPOTS = [(3, 0), (0, 3), (6, 2), (2, 6), (7, 3), (3, 7), (8, 2), (2, 8), (11, 0), (0, 11), (6, 6), (8, 8), (6, 8), (8, 6), (3, 14), (14, 3), (6, 12), (12, 6), (7, 11), (11, 7), (8, 12), (12, 8), (11, 14), (14, 11)]
+X3_LETTER_SPOTS = [(5, 1), (1, 5), (1, 9), (9, 1), (5, 5), (9, 9), (5, 9), (9, 5), (13, 5), (5, 13), (9, 13), (13, 9)]
+START_TILE = (7, 7)
+
 # === CLASSES ===
    
 # === FUNCTIONS ===
 
-def create_board_surf():
+def create_board_surf(board):
     board_surf = pygame.Surface((TILESIZE*15, TILESIZE*15))
     for y in range(15):
         for x in range(15):
-            rect = pygame.Rect(x*TILESIZE, y*TILESIZE, TILESIZE, TILESIZE)
+            rect = pygame.Rect(x*TILESIZE+TILE_MARGIN, y*TILESIZE+TILE_MARGIN, TILESIZE-TILE_MARGIN*2, TILESIZE-TILE_MARGIN*2)
+            if (board[y][x] == 'X3Word'):
+                pygame.draw.rect(board_surf, X3_WORD_COLOR, rect)
+                continue
+            if (board[y][x] == 'X2Word'):
+                pygame.draw.rect(board_surf, X2_WORD_COLOR, rect)
+                continue
+            if (board[y][x] == 'X2Letter'):
+                pygame.draw.rect(board_surf, X2_LETTER_COLOR, rect)
+                continue
+            if (board[y][x] == 'X3Letter'):
+                pygame.draw.rect(board_surf, X3_LETTER_COLOR, rect)
+                continue
+            if (board[y][x] == 'Start'):
+                pygame.draw.rect(board_surf, START_COLOR, rect)
+                continue
             pygame.draw.rect(board_surf, MAIN_THEME, rect)
     return board_surf
 
@@ -87,10 +118,26 @@ def create_board():
     for y in range(15):
         board.append([])
         for x in range(15):
-            board[y].append(None)
+            board[y].append('')
+
+    for (x, y) in X2_WORD_SPOTS:
+        board[y][x] = 'X2Word'
+    
+    for (x, y) in X3_WORD_SPOTS:
+        board[y][x] = 'X3Word'
+
+    for (x, y) in X2_LETTER_SPOTS:
+        board[y][x] = 'X2Letter'
+
+    for (x, y) in X3_LETTER_SPOTS:
+        board[y][x] = 'X3Letter'
+
+    (x, y) = START_TILE
+    board[y][x] = 'Start'
+
     return board
 
-# Creates a surface for an empty board with 8 tiles
+# Creates a surface for an empty player board with 8 tiles
 def create_player_board_surf():
     player_pieces_surf = pygame.Surface((TILESIZE*8, TILESIZE))
     for x in range(8):
@@ -132,12 +179,14 @@ def draw_player_pieces(screen, player_board, font):
 # --- init ---
  
 pygame.init()
-letter_font = pygame.font.SysFont('', 32)
+letter_font = pygame.font.SysFont('', 24)
+bonus_font = pygame.font.SysFont('', 20)
  
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen_rect = screen.get_rect()
- 
-board_surf = create_board_surf()
+
+board = create_board()
+board_surf = create_board_surf(board)
 
 shuffled_letters = shuffle_letters()
 player_board_surf = create_player_board_surf()
