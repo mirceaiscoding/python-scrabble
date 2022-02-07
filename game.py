@@ -1,4 +1,5 @@
 from operator import le
+import re
 import pygame
 import random
  
@@ -94,13 +95,14 @@ START_TILE = (7, 7)
 buttons = []
 
 class Button:
-	def __init__(self,text,width,height,pos,elevation,font):
+	def __init__(self,text,width,height,pos,elevation,font,click_function):
 		#Core attributes 
 		self.pressed = False
 		self.elevation = elevation
 		self.dynamic_elecation = elevation
 		self.original_y_pos = pos[1]
 		self.font = font
+		self.click_function = click_function
  
 		# top rectangle 
 		self.top_rect = pygame.Rect(pos,(width,height))
@@ -144,9 +146,10 @@ class Button:
 			else:
 				self.dynamic_elecation = self.elevation
 				if self.pressed == True:
-					print('click')
+					print('clicked')
 					self.pressed = False
 					self.change_text(self.text)
+					self.click_function(board, player_board)
 		else:
 			self.dynamic_elecation = self.elevation
 			self.top_color = '#475F77'
@@ -159,20 +162,20 @@ def create_board_surf(board):
     for y in range(15):
         for x in range(15):
             rect = pygame.Rect(x*TILESIZE+TILE_MARGIN, y*TILESIZE+TILE_MARGIN, TILESIZE-TILE_MARGIN*2, TILESIZE-TILE_MARGIN*2)
-            (tile_tipe, tile) = board[y][x]
-            if (tile_tipe == 'X3Word'):
+            (tile_type, tile) = board[y][x]
+            if (tile_type == 'X3Word'):
                 pygame.draw.rect(board_surf, X3_WORD_COLOR, rect)
                 continue
-            if (tile_tipe == 'X2Word'):
+            if (tile_type == 'X2Word'):
                 pygame.draw.rect(board_surf, X2_WORD_COLOR, rect)
                 continue
-            if (tile_tipe == 'X2Letter'):
+            if (tile_type == 'X2Letter'):
                 pygame.draw.rect(board_surf, X2_LETTER_COLOR, rect)
                 continue
-            if (tile_tipe == 'X3Letter'):
+            if (tile_type == 'X3Letter'):
                 pygame.draw.rect(board_surf, X3_LETTER_COLOR, rect)
                 continue
-            if (tile_tipe == 'Start'):
+            if (tile_type == 'Start'):
                 pygame.draw.rect(board_surf, START_COLOR, rect)
                 continue
             pygame.draw.rect(board_surf, MAIN_THEME, rect)
@@ -301,6 +304,142 @@ def shuffle_letters():
     # print ('Shuffled letters are:', letters)
     return letters
 
+# Get a list of the newly placed letter positions
+def get_placed_letters_positions():
+    placed_letters_positions = []
+    for y in range(15):
+        for x in range(15):
+            (tile_tipe, tile) = board[y][x]
+            if tile is not None and tile_tipe != 'Fixed':
+                placed_letters_positions.append((x, y))
+    print (f'Placed letters positions are {placed_letters_positions}')
+    return placed_letters_positions
+
+# Return true if position is next to a fixed letter or position is a start tile
+def has_adjacent_fixed_letters_or_is_start(board, position):
+    x, y = position
+    tile_type, tile = board[y][x]
+    if tile_type == 'Start':
+        print ('Start position')
+        return True
+    for (adjacent_x, adjacent_y) in [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]:
+        tile_type, tile = board[adjacent_y][adjacent_x]
+        if tile_type == 'Fixed':
+            return True
+    return False
+
+def has_no_empty_spots(board, direction, stable_coordinate, min, max):
+    if direction == 'X':
+        print(f'Checking for empty spots x={stable_coordinate}, y=[{min},{max}]')
+        # X is stable, check Y
+        for y in range(min, max+1):
+            tile_type, tile = board[y][stable_coordinate]
+            if tile is None:
+                return False
+        return True
+    if direction == 'Y':
+        # Y is stable, check X
+        print(f'Checking for empty spots y={stable_coordinate}, x=[{min},{max}]')
+        for x in range(min, max+1):
+            tile_type, tile = board[stable_coordinate][x]
+            if tile is None:
+                return False
+        return True
+
+# Check if positions are in a row / column
+def check_placed_letters_positions(board, placed_letters_positions):
+    flag = False
+    (min_x, min_y) = (max_x, max_y) = placed_letters_positions[0]
+    for (x, y) in placed_letters_positions:
+        min_x = min(x, min_x)
+        min_y = min(y, min_y)
+        max_x = max(x, max_x)
+        max_y = max(y, max_y)
+        flag = flag or has_adjacent_fixed_letters_or_is_start(board, (x, y))
+        
+    if flag == False:
+        return False
+    
+    print(f'x=[{min_x},{max_x}] y=[{min_y}, {max_y}]')
+
+    if min_x == max_x:
+        return has_no_empty_spots(board, 'X', min_x, min_y, max_y)
+    
+    if min_y == max_y:
+        return has_no_empty_spots(board, 'Y', min_y, min_x, max_x)
+
+    return False
+
+
+def get_newly_created_words(placed_letters_positions):
+    # TODO: implement this:
+    return []
+
+def check_words(new_words):
+    # TODO: implement this:
+    return True
+
+def return_letters(player_board, board, placed_letters_positions):
+    player_board_x = 0
+    while len(placed_letters_positions) > 0:
+        if player_board[player_board_x] is None:
+            x, y = placed_letters_positions.pop()
+            tile_type, tile = board[y][x]
+            board[y][x] = (tile_type, None)
+            player_board[player_board_x] = tile
+        player_board_x += 1
+        
+
+def get_score(placed_letters_positions):
+    # TODO: implement this:
+    return 0
+
+def get_new_letters(player_board, number_of_letters):
+    x = 0
+    while number_of_letters > 0 and len(shuffled_letters) > 0 and x < 8:
+        if player_board[x] == None:
+            player_board[x] = shuffled_letters.pop()
+            number_of_letters -= 1
+        x += 1
+
+def mark_letters_as_fixed(board, placed_letters_positions):
+    for (x, y) in placed_letters_positions:
+        tile_type, tile = board[y][x]
+        board[y][x] = ('Fixed', tile)
+
+
+def click_submit_button(board, player_board):
+    global turn_count
+
+    placed_letters_positions = get_placed_letters_positions()
+
+    if placed_letters_positions == []:
+        return
+
+    if check_placed_letters_positions(board, placed_letters_positions) == False:
+        print('Letters can not be placed like this!')
+        return_letters(player_board, board, placed_letters_positions)
+        return
+
+    new_words = get_newly_created_words(placed_letters_positions)
+
+    if check_words(new_words) == False:
+        score = 0
+        # return letters to player
+        return_letters(player_board, board, placed_letters_positions)
+        return
+    else:
+        score = get_score(placed_letters_positions)
+        number_of_placed_letters = len(placed_letters_positions)
+        get_new_letters(player_board, number_of_placed_letters)
+
+    mark_letters_as_fixed(board, placed_letters_positions)
+
+    # Increment turn count
+    turn_count += 1
+    print(f'Turn {turn_count}')
+    
+
 def draw_player_pieces(screen, player_pieces, font, selected_tile):
     if selected_tile:
         selected_board_type = selected_tile[0]
@@ -341,6 +480,8 @@ def draw_buttons():
 
 # --- (global) variables ---
 
+turn_count = 0
+
 # --- init ---
  
 pygame.init()
@@ -358,7 +499,7 @@ shuffled_letters = shuffle_letters()
 player_board_surf = create_player_board_surf()
 player_board = create_player_pieces(shuffled_letters)
 
-submit_button = Button('Submit', 80, 20, SUBMIT_BUTTON_POS, 1, letter_font)
+submit_button = Button('Submit', 80, 20, SUBMIT_BUTTON_POS, 1, letter_font, click_submit_button)
 
 # --- objects ---
 
@@ -391,7 +532,8 @@ while is_running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 if piece is not None:
-                    selected_tile = tile
+                    if (board_type == 'Board' and board[y][x][0] != 'Fixed') or board_type == 'Player Board':
+                        selected_tile = tile
                
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
