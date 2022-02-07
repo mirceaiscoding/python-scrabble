@@ -81,6 +81,8 @@ BOARD_POS = (10, 10)
 
 PLAYER_BOARD_POS = (10, 500)
 
+SUBMIT_BUTTON_POS = (300, 505)
+
 X2_WORD_SPOTS = [(1, 1), (2, 2), (3, 3), (4, 4), (13, 1), (12, 2), (11, 3), (10, 4), (1, 13), (2, 12), (3, 11), (4, 10), (10, 10), (11, 11), (12, 12), (13, 13)]
 X3_WORD_SPOTS = [(0, 0), (7, 0), (14, 0), (0, 7), (14, 7), (0, 14), (7, 14), (14, 14)]
 X2_LETTER_SPOTS = [(3, 0), (0, 3), (6, 2), (2, 6), (7, 3), (3, 7), (8, 2), (2, 8), (11, 0), (0, 11), (6, 6), (8, 8), (6, 8), (8, 6), (3, 14), (14, 3), (6, 12), (12, 6), (7, 11), (11, 7), (8, 12), (12, 8), (11, 14), (14, 11)]
@@ -89,6 +91,66 @@ START_TILE = (7, 7)
 
 # === CLASSES ===
    
+buttons = []
+
+class Button:
+	def __init__(self,text,width,height,pos,elevation,font):
+		#Core attributes 
+		self.pressed = False
+		self.elevation = elevation
+		self.dynamic_elecation = elevation
+		self.original_y_pos = pos[1]
+		self.font = font
+ 
+		# top rectangle 
+		self.top_rect = pygame.Rect(pos,(width,height))
+		self.top_color = '#475F77'
+ 
+		# bottom rectangle 
+		self.bottom_rect = pygame.Rect(pos,(width,height))
+		self.bottom_color = '#354B5E'
+
+		#text
+		self.text = text
+		self.text_surf = self.font.render(text,True,'#FFFFFF')
+		self.text_rect = self.text_surf.get_rect(center = self.top_rect.center)
+		buttons.append(self)
+ 
+	def change_text(self, newtext):
+		self.text_surf = self.font.render(newtext, True,'#FFFFFF')
+		self.text_rect = self.text_surf.get_rect(center = self.top_rect.center)
+ 
+	def draw(self):
+		# elevation logic 
+		self.top_rect.y = self.original_y_pos - self.dynamic_elecation
+		self.text_rect.center = self.top_rect.center 
+ 
+		self.bottom_rect.midtop = self.top_rect.midtop
+		self.bottom_rect.height = self.top_rect.height + self.dynamic_elecation
+ 
+		pygame.draw.rect(screen,self.bottom_color, self.bottom_rect,border_radius = 12)
+		pygame.draw.rect(screen,self.top_color, self.top_rect,border_radius = 12)
+		screen.blit(self.text_surf, self.text_rect)
+		self.check_click()
+ 
+	def check_click(self):
+		mouse_pos = pygame.mouse.get_pos()
+		if self.top_rect.collidepoint(mouse_pos):
+			self.top_color = '#D74B4B'
+			if pygame.mouse.get_pressed()[0]:
+				self.dynamic_elecation = 0
+				self.pressed = True
+				self.change_text(f"{self.text}")
+			else:
+				self.dynamic_elecation = self.elevation
+				if self.pressed == True:
+					print('click')
+					self.pressed = False
+					self.change_text(self.text)
+		else:
+			self.dynamic_elecation = self.elevation
+			self.top_color = '#475F77'
+
 # === FUNCTIONS ===
 
 # Creates the board surface
@@ -251,6 +313,9 @@ def draw_board_pieces(screen, board, font, selected_tile):
                 pygame.draw.rect(screen, WHITE, letter_rect)
                 screen.blit(letter_render, letter_render.get_rect(center=letter_rect.center))
 
+def draw_buttons():
+	for b in buttons:
+		b.draw()
 
 # === MAIN === 
 
@@ -261,6 +326,7 @@ def draw_board_pieces(screen, board, font, selected_tile):
 pygame.init()
 letter_font = pygame.font.SysFont('', 24)
 bonus_font = pygame.font.SysFont('', 20)
+button_font = pygame.font.SysFont('', 100)
  
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen_rect = screen.get_rect()
@@ -271,6 +337,8 @@ board_surf = create_board_surf(board)
 shuffled_letters = shuffle_letters()
 player_board_surf = create_player_board_surf()
 player_board = create_player_pieces(shuffled_letters)
+
+submit_button = Button('Submit', 80, 20, SUBMIT_BUTTON_POS, 1, letter_font)
 
 # --- objects ---
 
@@ -364,6 +432,9 @@ while is_running:
     # draw the tile as it is dragged
     draw_drag_tile(screen, board, player_board, selected_tile, letter_font)
        
+    # draw buttons
+    draw_buttons()
+
     pygame.display.update()
  
     # --- FPS ---
