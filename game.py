@@ -5,6 +5,8 @@ import random
  
 # === CONSTANS ===
  
+PLAYERS = ['Player 1']
+
 BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 
@@ -22,7 +24,7 @@ X2_LETTER_COLOR = (134, 87, 255)
 X3_LETTER_COLOR = (234, 207, 150)
 START_COLOR = (246, 197, 233)
 
-SCREEN_WIDTH  = 600
+SCREEN_WIDTH  = 700
 SCREEN_HEIGHT = 600
 
 TILESIZE = 30
@@ -83,6 +85,9 @@ BOARD_POS = (10, 10)
 PLAYER_BOARD_POS = (10, 500)
 
 SUBMIT_BUTTON_POS = (300, 505)
+
+SCORE_BOARD_POS = (500, 10)
+
 
 X2_WORD_SPOTS = [(1, 1), (2, 2), (3, 3), (4, 4), (13, 1), (12, 2), (11, 3), (10, 4), (1, 13), (2, 12), (3, 11), (4, 10), (10, 10), (11, 11), (12, 12), (13, 13)]
 X3_WORD_SPOTS = [(0, 0), (7, 0), (14, 0), (0, 7), (14, 7), (0, 14), (7, 14), (14, 14)]
@@ -543,7 +548,7 @@ def click_submit_button(board, player_board):
         return_letters(player_board, board, placed_letters_positions)
         return
 
-    new_words = get_newly_created_words(board, placed_letters_positions, direction)
+    new_words, score = get_newly_created_words(board, placed_letters_positions, direction)
 
     if check_words(new_words) == False:
         score = 0
@@ -551,15 +556,17 @@ def click_submit_button(board, player_board):
         return_letters(player_board, board, placed_letters_positions)
         return
     else:
-        score = get_score(placed_letters_positions)
         number_of_placed_letters = len(placed_letters_positions)
         get_new_letters(player_board, number_of_placed_letters)
 
     mark_letters_as_fixed(board, placed_letters_positions)
 
+    # Add score to player
+    player_number = turn_count % len(PLAYERS)
+    player_score[player_number] += score
+
     # Increment turn count
     turn_count += 1
-    print(f'Turn {turn_count}')
     
 
 def draw_player_pieces(screen, player_pieces, font, selected_tile):
@@ -598,11 +605,21 @@ def draw_buttons():
 	for b in buttons:
 		b.draw()
 
+def draw_score_board(font):
+    column_width = 20
+    x, y = SCORE_BOARD_POS
+    for i in range(len(PLAYERS)):
+        score_table = font.render(("{} {}".format(PLAYERS[i].ljust(column_width), str(player_score[i]).ljust(column_width))), True, BLACK)
+        screen.blit(score_table, (x, y))
+        x += column_width
+
 # === MAIN === 
 
 # --- (global) variables ---
 
 turn_count = 0
+
+player_score = [0] * len(PLAYERS)
 
 # --- init ---
  
@@ -723,6 +740,9 @@ while is_running:
        
     # draw buttons
     draw_buttons()
+
+    # draw score board
+    draw_score_board(letter_font)
 
     pygame.display.update()
  
