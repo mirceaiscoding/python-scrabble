@@ -315,6 +315,26 @@ def get_placed_letters_positions():
     print (f'Placed letters positions are {placed_letters_positions}')
     return placed_letters_positions
 
+
+def has_adjacent_vertical_letters(board, position):
+    x, y = position
+    tile_type, tile = board[y][x]
+    for (adjacent_x, adjacent_y) in [(x, y-1), (x, y+1)]:
+        tile_type, tile = board[adjacent_y][adjacent_x]
+        if tile is not None:
+            return True
+    return False
+
+def has_adjacent_horizontal_letters(board, position):
+    x, y = position
+    tile_type, tile = board[y][x]
+    for (adjacent_x, adjacent_y) in [(x-1, y), (x+1, y)]:
+        tile_type, tile = board[adjacent_y][adjacent_x]
+        if tile is not None:
+            return True
+    return False
+
+
 # Return true if position is next to a fixed letter or position is a start tile
 def has_adjacent_fixed_letters_or_is_start(board, position):
     x, y = position
@@ -329,7 +349,7 @@ def has_adjacent_fixed_letters_or_is_start(board, position):
     return False
 
 def has_no_empty_spots(board, direction, stable_coordinate, min, max):
-    if direction == 'X':
+    if direction == 'Vertical':
         print(f'Checking for empty spots x={stable_coordinate}, y=[{min},{max}]')
         # X is stable, check Y
         for y in range(min, max+1):
@@ -337,7 +357,7 @@ def has_no_empty_spots(board, direction, stable_coordinate, min, max):
             if tile is None:
                 return False
         return True
-    if direction == 'Y':
+    if direction == 'Horizontal':
         # Y is stable, check X
         print(f'Checking for empty spots y={stable_coordinate}, x=[{min},{max}]')
         for x in range(min, max+1):
@@ -358,22 +378,122 @@ def check_placed_letters_positions(board, placed_letters_positions):
         flag = flag or has_adjacent_fixed_letters_or_is_start(board, (x, y))
         
     if flag == False:
-        return False
+        return False, None
     
     print(f'x=[{min_x},{max_x}] y=[{min_y}, {max_y}]')
 
     if min_x == max_x:
-        return has_no_empty_spots(board, 'X', min_x, min_y, max_y)
+        return has_no_empty_spots(board, 'Vertical', min_x, min_y, max_y), 'Vertical'
     
     if min_y == max_y:
-        return has_no_empty_spots(board, 'Y', min_y, min_x, max_x)
+        return has_no_empty_spots(board, 'Horizontal', min_y, min_x, max_x), 'Horizontal'
 
-    return False
+    return False, None
 
 
-def get_newly_created_words(placed_letters_positions):
-    # TODO: implement this:
-    return []
+def get_horizontal_word(board, pos):
+    x, y = pos
+    score = 0
+    word = ''
+    word_multiplier = 1
+    while board[y][x][1] is not None:
+        tile_type, tile = board[y][x]
+        letter_score = LETTER_SCORE[tile]
+        if tile_type == 'X2Letter':
+            letter_score *= 2
+        if tile_type == 'X3Letter':
+            letter_score *= 3
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 2
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 3
+        
+        word = tile + word
+        score += letter_score
+        x -= 1
+    x, y = pos
+    x += 1
+    while board[y][x][1] is not None:
+        tile_type, tile = board[y][x]
+        letter_score = LETTER_SCORE[tile]
+        if tile_type == 'X2Letter':
+            letter_score *= 2
+        if tile_type == 'X3Letter':
+            letter_score *= 3
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 2
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 3
+        word = word + tile
+        score += letter_score
+        x += 1
+    score *= word_multiplier
+    return (word, score)
+
+def get_vertical_word(board, pos):
+    x, y = pos
+    score = 0
+    word = ''
+    word_multiplier = 1
+    while board[y][x][1] is not None:
+        tile_type, tile = board[y][x]
+        letter_score = LETTER_SCORE[tile]
+        if tile_type == 'X2Letter':
+            letter_score *= 2
+        if tile_type == 'X3Letter':
+            letter_score *= 3
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 2
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 3
+        word = tile + word
+        score += letter_score
+        y -= 1
+    x, y = pos
+    y += 1
+    while board[y][x][1] is not None:
+        tile_type, tile = board[y][x]
+        letter_score = LETTER_SCORE[tile]
+        if tile_type == 'X2Letter':
+            letter_score *= 2
+        if tile_type == 'X3Letter':
+            letter_score *= 3
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 2
+        if (tile_type == 'X2Word'):
+            word_multiplier *= 3
+        word = word + tile
+        score += letter_score
+        y += 1
+    score *= word_multiplier
+    return (word, score)
+        
+
+def get_newly_created_words(board, placed_letters_positions, direction):
+    words = []
+    total_score = 0
+    first_pos = placed_letters_positions[0]
+    if direction == 'Horizontal':
+        main_word, main_score = get_horizontal_word(board, first_pos)
+        words.append(main_word)
+        total_score += main_score
+        for pos in placed_letters_positions:
+            if has_adjacent_vertical_letters(board, pos):
+                word, score = get_vertical_word(board, pos)
+                words.append(word)
+                total_score += score
+    if direction == 'Vertical':
+        main_word, main_score = get_vertical_word(board, first_pos)
+        words.append(main_word)
+        total_score += main_score
+        for pos in placed_letters_positions:
+            if has_adjacent_horizontal_letters(board, pos):
+                word, score = get_horizontal_word(board, pos)
+                words.append(word)
+                total_score += score
+    print(f'Words {words} => {total_score}')
+    return words, total_score
+
 
 def check_words(new_words):
     # TODO: implement this:
@@ -416,12 +536,14 @@ def click_submit_button(board, player_board):
     if placed_letters_positions == []:
         return
 
-    if check_placed_letters_positions(board, placed_letters_positions) == False:
+    is_in_line, direction = check_placed_letters_positions(board, placed_letters_positions)
+
+    if is_in_line == False:
         print('Letters can not be placed like this!')
         return_letters(player_board, board, placed_letters_positions)
         return
 
-    new_words = get_newly_created_words(placed_letters_positions)
+    new_words = get_newly_created_words(board, placed_letters_positions, direction)
 
     if check_words(new_words) == False:
         score = 0
