@@ -1,3 +1,4 @@
+from operator import le
 import pygame
 import random
  
@@ -96,7 +97,7 @@ def create_board_surf(board):
     for y in range(15):
         for x in range(15):
             rect = pygame.Rect(x*TILESIZE+TILE_MARGIN, y*TILESIZE+TILE_MARGIN, TILESIZE-TILE_MARGIN*2, TILESIZE-TILE_MARGIN*2)
-            (tile_tipe, letter) = board[y][x]
+            (tile_tipe, tile) = board[y][x]
             if (tile_tipe == 'X3Word'):
                 pygame.draw.rect(board_surf, X3_WORD_COLOR, rect)
                 continue
@@ -115,37 +116,59 @@ def create_board_surf(board):
             pygame.draw.rect(board_surf, MAIN_THEME, rect)
     return board_surf
 
-# Creates an empty board
+# Creates an empty board with the right tile multipliers in place
 def create_board():
     board = []
     for y in range(15):
         board.append([])
         for x in range(15):
-            board[y].append(('Normal', ''))
+            board[y].append(('Normal', None))
 
     for (x, y) in X2_WORD_SPOTS:
-        board[y][x] = (('X2Word', ''))
+        board[y][x] = (('X2Word', None))
     
     for (x, y) in X3_WORD_SPOTS:
-        board[y][x] = (('X3Word', ''))
+        board[y][x] = (('X3Word', None))
 
     for (x, y) in X2_LETTER_SPOTS:
-        board[y][x] = (('X2Letter', ''))
+        board[y][x] = (('X2Letter', None))
 
     for (x, y) in X3_LETTER_SPOTS:
-        board[y][x] = (('X3Letter', ''))
+        board[y][x] = (('X3Letter', None))
 
     (x, y) = START_TILE
-    board[y][x] = (('Start', ''))
+    board[y][x] = (('Start', None))
 
     return board
+
+# Checks if a spot on the board is free
+def is_free_board_spot(board, x, y):
+    (tile_tipe, letter) = board[y][x]
+    return letter == None
+
+# Clears a tile (either on the board or the player board)
+def clear_tile(board, player_board, board_type, x, y):
+    if board_type is not None:
+        if board_type == 'Player Board':
+            letter = player_board[x]
+            player_board[x] = None
+        if board_type == 'Board':
+            (mult, letter) = board[y][x]
+            board[y][x] = (mult, None)
+        return letter
+
+# Puts the tile on the board
+def put_tile_on_board(board, x, y, tile):
+    (mult, crt_tile) = board[y][x]
+    board[y][x] = (mult, tile)
+
 
 # Returns the tile under the mouse (either on the main board or on the player board)
 def get_tile_under_mouse(board, player_board):
 
     mouse_pos_on_board = pygame.Vector2(pygame.mouse.get_pos()) - BOARD_POS
     x, y = [int(v // TILESIZE) for v in mouse_pos_on_board]
-    if x >= 0 and y >= 0 and x < 15 and y < 15: return ('Board', board[y][x], x, y)
+    if x >= 0 and y >= 0 and x < 15 and y < 15: return ('Board', board[y][x][1], x, y)
 
     mouse_pos_on_player_board = pygame.Vector2(pygame.mouse.get_pos()) - PLAYER_BOARD_POS
     x, y = [int(v // TILESIZE) for v in mouse_pos_on_player_board]
@@ -154,7 +177,7 @@ def get_tile_under_mouse(board, player_board):
     return None, None, None, None
 
 def draw_drag_tile(screen, board, player_board, selected_tile, font):
-    if selected_tile:
+    if selected_tile and selected_tile[0]:
 
         selected_piece = selected_tile[1]
 
@@ -203,13 +226,31 @@ def draw_player_pieces(screen, player_pieces, font, selected_tile):
     for x in range(8): 
         letter = player_pieces[x]
         if letter is not None:
-            print (f'Position {x}: letter: {letter}')
+            # print (f'Position {x}: letter: {letter}')
             if selected_tile and selected_board_type == 'Player Board' and x == selected_x:
                 continue
             letter_render = font.render(letter, True, BLACK)   # Letter
             letter_rect = pygame.Rect(PLAYER_BOARD_POS[0] + x*TILESIZE+TILE_MARGIN, PLAYER_BOARD_POS[1]+TILE_MARGIN, TILESIZE-TILE_MARGIN*2, TILESIZE-TILE_MARGIN*2)
             pygame.draw.rect(screen, WHITE, letter_rect)
             screen.blit(letter_render, letter_render.get_rect(center=letter_rect.center))
+
+def draw_board_pieces(screen, board, font, selected_tile):
+    if selected_tile:
+        selected_board_type = selected_tile[0]
+        selected_x = selected_tile[2]
+        selected_y = selected_tile[3]
+    for y in range(15):
+        for x in range(15):
+            letter = board[y][x][1]
+            if letter is not None:
+                # print (f'Position {x}, {y}: letter: {letter}')
+                if selected_tile and selected_board_type == 'Board' and x == selected_x and y == selected_y:
+                    continue
+                letter_render = font.render(letter, True, BLACK)   # Letter
+                letter_rect = pygame.Rect(BOARD_POS[0] + x*TILESIZE+TILE_MARGIN, BOARD_POS[1] + y*TILESIZE+TILE_MARGIN, TILESIZE-TILE_MARGIN*2, TILESIZE-TILE_MARGIN*2)
+                pygame.draw.rect(screen, WHITE, letter_rect)
+                screen.blit(letter_render, letter_render.get_rect(center=letter_rect.center))
+
 
 # === MAIN === 
 
@@ -243,7 +284,8 @@ selected_tile = None
  
 while is_running:
 
-    board_type, piece, x, y = get_tile_under_mouse(board, player_board)
+    tile = get_tile_under_mouse(board, player_board)
+    board_type, piece, x, y = tile
  
     # --- events ---
    
@@ -261,14 +303,16 @@ while is_running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 if piece is not None:
-                    selected_tile = board_type, piece, x, y
+                    selected_tile = tile
                
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 if selected_tile is not None:
-                    (selected_tile_bord, selected_piece, selected_x, selected_y) = selected_tile
+                    (selected_tile_board, selected_piece, selected_x, selected_y) = selected_tile
                     if board_type == 'Player Board':
-                        if selected_tile_bord == 'Player Board':
+                        if selected_tile_board == 'Player Board':
+                            # Move from player board to player board
+                            print ('Move piece to player board')
                             if piece is None:
                                 # Free space => Just put it there
                                 player_board[selected_x] = None
@@ -290,6 +334,18 @@ while is_running:
                                     player_board[position_to_move] = piece_to_move
                                     piece_to_move = next_piece
 
+                        if selected_tile_board == 'Board':
+                            # Move from board to player board
+                            clear_tile(board, player_board, selected_tile_board, selected_x, selected_y)
+                            
+                    if board_type == 'Board':
+                        # Move to board
+                        print ('Move piece to board')
+                        if is_free_board_spot(board, x, y):
+                            print("Move to free spot")
+                            clear_tile(board, player_board, selected_tile_board, selected_x, selected_y)
+                            put_tile_on_board(board, x, y, selected_piece)
+
                     selected_tile = None
        
     # --- updates ---
@@ -303,10 +359,10 @@ while is_running:
    
     # draw pieces
     draw_player_pieces(screen, player_board, letter_font, selected_tile)
+    draw_board_pieces(screen, board, letter_font, selected_tile)
 
     # draw the tile as it is dragged
     draw_drag_tile(screen, board, player_board, selected_tile, letter_font)
-
        
     pygame.display.update()
  
