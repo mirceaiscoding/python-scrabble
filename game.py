@@ -208,6 +208,25 @@ def is_free_board_spot(board, x, y):
     (tile_tipe, letter) = board[y][x]
     return letter == None
 
+def get_free_player_board_spot(player_board, x):
+    for i in range(x, 8):
+        if player_board[i] == None:
+            return i
+    for i in range(x-1, -1, -1):
+        if player_board[i] == None:
+            return i
+
+# places selected piece to x position and fixes the other pieces
+def place_selected_piece_fix_player_board(player_board, x, selected_x, selected_piece, direction):
+    position_to_move = x
+    piece_to_move = player_board[position_to_move]
+    player_board[position_to_move] = selected_piece
+    while piece_to_move is not None:
+        position_to_move += direction
+        next_piece = player_board[position_to_move]
+        player_board[position_to_move] = piece_to_move
+        piece_to_move = next_piece
+
 # Clears a tile (either on the board or the player board)
 def clear_tile(board, player_board, board_type, x, y):
     if board_type is not None:
@@ -238,6 +257,7 @@ def get_tile_under_mouse(board, player_board):
 
     return None, None, None, None
 
+# draws the selected tile at the mouse position
 def draw_drag_tile(screen, board, player_board, selected_tile, font):
     if selected_tile and selected_tile[0]:
 
@@ -393,18 +413,23 @@ while is_running:
                                     direction = 1
                                 
                                 player_board[selected_x] = None
-                                position_to_move = x
-                                piece_to_move = player_board[position_to_move]
-                                player_board[position_to_move] = selected_piece
-                                while piece_to_move is not None:
-                                    position_to_move += direction
-                                    next_piece = player_board[position_to_move]
-                                    player_board[position_to_move] = piece_to_move
-                                    piece_to_move = next_piece
+                                place_selected_piece_fix_player_board(player_board, x, selected_x, selected_piece, direction)
 
                         if selected_tile_board == 'Board':
                             # Move from board to player board
                             clear_tile(board, player_board, selected_tile_board, selected_x, selected_y)
+                            if piece is None:
+                                # Free space => Just put it there
+                                player_board[x] = selected_piece
+                            else:
+                                free_x = get_free_player_board_spot(player_board, x)
+                                if free_x < x:
+                                    direction = -1
+                                else:
+                                    direction = 1
+
+                                place_selected_piece_fix_player_board(player_board, x, selected_x, selected_piece, direction)
+
                             
                     if board_type == 'Board':
                         # Move to board
