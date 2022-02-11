@@ -2,6 +2,7 @@ from operator import le
 import re
 import pygame
 import random
+from word_checker import WordChecker
  
 # === CONSTANS ===
  
@@ -500,10 +501,6 @@ def get_newly_created_words(board, placed_letters_positions, direction):
     return words, total_score
 
 
-def check_words(new_words):
-    # TODO: implement this:
-    return True
-
 def return_letters(player_board, board, placed_letters_positions):
     player_board_x = 0
     while len(placed_letters_positions) > 0:
@@ -550,7 +547,7 @@ def click_submit_button(board, player_board):
 
     new_words, score = get_newly_created_words(board, placed_letters_positions, direction)
 
-    if check_words(new_words) == False:
+    if word_checker.check_words(new_words) == False:
         score = 0
         # return letters to player
         return_letters(player_board, board, placed_letters_positions)
@@ -620,6 +617,8 @@ def draw_score_board(font):
 turn_count = 0
 
 player_score = [0] * len(PLAYERS)
+
+word_checker = WordChecker('resources/dictionary/loc-flexiuni-6.0.txt')
 
 # --- init ---
  
